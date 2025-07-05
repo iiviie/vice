@@ -12,10 +12,10 @@ function createOverlay() {
   
   // Create the overlay window
   overlayWindow = new BrowserWindow({
-    width: 300,
-    height: 200,
-    x: width - 320, // Position near top-right
-    y: 20,
+    width: 800,
+    height: 60,
+    x: Math.floor((width - 800) / 2), // Center horizontally
+    y: 10, // Top of screen
     
     // Window properties for overlay behavior
     frame: false,           // Frameless window
@@ -26,7 +26,7 @@ function createOverlay() {
     
     // CRITICAL: Use opaque background - transparent windows break content protection
     transparent: false,     // Must be false for content protection to work
-    backgroundColor: '#1e1e1e', // Dark opaque background
+    backgroundColor: '#1a1a1a', // Dark opaque background
     opacity: 0.9,           // Semi-transparent overlay (this is safe)
     
     // Window behavior
@@ -150,6 +150,7 @@ ipcMain.handle('get-native-handle', () => {
   }
   return null;
 });
+
 
 // App event handlers
 app.whenReady().then(() => {

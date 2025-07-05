@@ -7,184 +7,237 @@
         body {
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1e1e1e;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
             color: #ffffff;
             overflow: hidden;
             user-select: none;
-            -webkit-app-region: drag; /* Makes entire window draggable */
+            -webkit-app-region: drag;
+            height: 100vh;
         }
         
-        .overlay-container {
+        .bar-container {
             width: 100%;
-            height: 100vh;
+            height: 100%;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-            border: 1px solid #404040;
-            border-radius: 8px;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 50%, #2a2a2a 100%);
+            border: 1px solid #3a3a3a;
+            border-radius: 25px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
         
-        .title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #00d4ff;
-            text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
-        }
-        
-        .status {
-            font-size: 12px;
-            color: #90ee90;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .info {
-            font-size: 10px;
-            color: #888;
-            text-align: center;
-            line-height: 1.4;
-            max-width: 250px;
-        }
-        
-        .hotkey-info {
-            font-size: 9px;
-            color: #00d4ff;
-            text-align: center;
-            margin-top: 8px;
-            padding: 3px 6px;
-            background: rgba(0, 212, 255, 0.1);
-            border-radius: 4px;
-            border: 1px solid rgba(0, 212, 255, 0.3);
-        }
-        
-        .controls {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            -webkit-app-region: no-drag; /* Buttons should not drag */
-        }
-        
-        .control-btn {
-            background: #404040;
-            border: none;
-            color: #fff;
-            width: 20px;
-            height: 20px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 2px;
-            display: inline-flex;
+        .left-section {
+            display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 12px;
         }
         
-        .control-btn:hover {
-            background: #505050;
-        }
-        
-        .close-btn:hover {
-            background: #e74c3c;
-        }
-        
-        .minimize-btn:hover {
-            background: #f39c12;
-        }
-        
-        .indicator {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            width: 8px;
-            height: 8px;
+        .status-dot {
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
-            background: #00ff00;
-            box-shadow: 0 0 6px rgba(0, 255, 0, 0.6);
+            background: #00d4aa;
+            box-shadow: 0 0 8px rgba(0, 212, 170, 0.6);
             animation: pulse 2s infinite;
         }
         
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        .status-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: #ffffff;
         }
         
-        .test-area {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
+        .center-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex: 1;
+            justify-content: center;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #b0b0b0;
+        }
+        
+        .feature-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #666;
+        }
+        
+        .right-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
             -webkit-app-region: no-drag;
         }
         
-        .test-btn {
-            background: #2c3e50;
-            border: 1px solid #34495e;
+        .hotkey-display {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 11px;
+            color: #b0b0b0;
+            font-weight: 500;
+        }
+        
+        .control-button {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #b0b0b0;
+            font-size: 12px;
+        }
+        
+        .control-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+        }
+        
+        .settings-button {
+            background: none;
+            border: none;
+            color: #b0b0b0;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 6px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        
+        .settings-button:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+        
+        @keyframes pulse {
+            0% { 
+                opacity: 1; 
+                transform: scale(1);
+                box-shadow: 0 0 8px rgba(0, 212, 170, 0.6);
+            }
+            50% { 
+                opacity: 0.8; 
+                transform: scale(1.1);
+                box-shadow: 0 0 12px rgba(0, 212, 170, 0.8);
+            }
+            100% { 
+                opacity: 1; 
+                transform: scale(1);
+                box-shadow: 0 0 8px rgba(0, 212, 170, 0.6);
+            }
+        }
+        
+        .dev-controls {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            display: none;
+            gap: 8px;
+            flex-direction: column;
+            -webkit-app-region: no-drag;
+            z-index: 1000;
+        }
+        
+        .dev-controls.show {
+            display: flex;
+        }
+        
+        .dev-button {
+            background: #333;
+            border: 1px solid #555;
             color: #fff;
             padding: 4px 8px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 10px;
-            margin: 2px;
+            transition: all 0.2s ease;
         }
         
-        .test-btn:hover {
-            background: #34495e;
+        .dev-button:hover {
+            background: #444;
         }
         
-        .warning {
-            color: #e74c3c;
-            font-size: 9px;
-            margin-top: 5px;
+        .opacity-display {
+            font-size: 10px;
+            color: #666;
             text-align: center;
+            margin-top: 4px;
         }
     </style>
 </head>
 <body>
-    <div class="overlay-container">
-        <!-- Status indicator -->
-        <div class="indicator" title="Protected from capture"></div>
-        
-        <!-- Window controls -->
-        <div class="controls">
-            <button class="control-btn minimize-btn" onclick="minimizeWindow()" title="Minimize">−</button>
-            <button class="control-btn close-btn" onclick="closeWindow()" title="Close">×</button>
+    <div class="bar-container">
+        <!-- Left section: Status -->
+        <div class="left-section">
+            <div class="status-dot"></div>
+            <div class="status-text">Stealth Mode</div>
         </div>
         
-        <!-- Main content -->
-        <div class="title">🛡️ Stealth Overlay</div>
-        <div class="status">Protected from Screen Capture</div>
-        <div class="info">
-            This window is hidden from:<br>
-            • Screenshots (PrtSc, Snipping Tool)<br>
-            • Screen sharing (Zoom, Teams, Discord)<br>
-            • Screen recording (OBS, Camtasia)<br>
-            • Desktop capture APIs
-        </div>
-        
-        <div class="hotkey-info">
-            Press <strong>Ctrl+Shift+H</strong> to hide/show
-        </div>
-        
-        <!-- Test controls -->
-        <div class="test-area">
-            <button class="test-btn" onclick="toggleAlwaysOnTop()">Toggle Always On Top</button>
-            <button class="test-btn" onclick="testCapture()">Test Protection</button>
-            <button class="test-btn" onclick="toggleOpacity()">Lower Opacity</button>
-            <button class="test-btn" onclick="resetOpacity()">Reset Opacity</button>
-            <div class="warning" id="transparencyWarning" style="display: none;">
-                ⚠️ Transparency may break protection!
+        <!-- Center section: Features -->
+        <div class="center-section">
+            <div class="feature-item">
+                <div class="feature-dot"></div>
+                <span>Screen protected</span>
+            </div>
+            <div class="feature-item">
+                <div class="feature-dot"></div>
+                <span>Capture blocked</span>
+            </div>
+            <div class="feature-item">
+                <div class="feature-dot"></div>
+                <span>Share invisible</span>
             </div>
         </div>
+        
+        <!-- Right section: Controls -->
+        <div class="right-section">
+            <div class="hotkey-display">⌘⇧H</div>
+            <button class="settings-button" onclick="toggleDevControls()" title="Developer Controls">⚙️</button>
+        </div>
+    </div>
+
+    <!-- Developer controls (hidden by default) -->
+    <div class="dev-controls" id="devControls">
+        <button class="dev-button" onclick="testCapture()">Test Flash</button>
+        <button class="dev-button" onclick="toggleOpacity()">Lower Opacity</button>
+        <button class="dev-button" onclick="resetOpacity()">Reset Opacity</button>
+        <button class="dev-button" onclick="toggleAlwaysOnTop()">Toggle Pin</button>
+        <div class="opacity-display" id="opacityDisplay">90%</div>
+        <button class="dev-button" onclick="minimizeWindow()">Minimize</button>
+        <button class="dev-button" onclick="closeWindow()">Close</button>
     </div>
 
     <script>
         const { ipcRenderer } = require('electron');
+        
+        // Developer controls toggle
+        function toggleDevControls() {
+            const devControls = document.getElementById('devControls');
+            devControls.classList.toggle('show');
+        }
         
         // Window control functions using IPC
         async function minimizeWindow() {
@@ -203,50 +256,43 @@
         
         let currentOpacity = 0.9;
         async function toggleOpacity() {
-            const warning = document.getElementById('transparencyWarning');
+            const opacityDisplay = document.getElementById('opacityDisplay');
             
             if (currentOpacity === 0.9) {
                 currentOpacity = 0.7;
-                warning.style.display = 'block';
-                warning.textContent = '⚠️ Transparency may break protection!';
                 console.log('⚠️ WARNING: Higher transparency may affect capture protection!');
             } else if (currentOpacity === 0.7) {
                 currentOpacity = 0.5;
-                warning.textContent = '⚠️ DANGER: Very transparent!';
                 console.log('⚠️ DANGER: Very transparent - protection may be broken!');
             } else if (currentOpacity === 0.5) {
                 currentOpacity = 0.3;
-                warning.textContent = '🚨 EXTREME: Almost invisible!';
                 console.log('🚨 EXTREME: Almost invisible - protection likely broken!');
             } else if (currentOpacity === 0.3) {
                 currentOpacity = 0.1;
-                warning.textContent = '💀 CRITICAL: Barely visible!';
                 console.log('💀 CRITICAL: Barely visible - protection definitely broken!');
             } else if (currentOpacity === 0.1) {
                 currentOpacity = 0.05;
-                warning.textContent = '👻 GHOST MODE: Almost gone!';
                 console.log('👻 GHOST MODE: Almost transparent - this should break everything!');
             } else {
                 currentOpacity = 0.9;
-                warning.style.display = 'none';
                 console.log('✅ Back to safe opacity level');
             }
             
             await ipcRenderer.invoke('set-opacity', currentOpacity);
+            opacityDisplay.textContent = Math.round(currentOpacity * 100) + '%';
             console.log('Current opacity:', currentOpacity);
-            console.log('TEST NOW: Take a screenshot or start screen share to test protection!');
         }
         
         async function resetOpacity() {
             currentOpacity = 0.9;
             await ipcRenderer.invoke('set-opacity', currentOpacity);
-            const warning = document.getElementById('transparencyWarning');
-            warning.style.display = 'none';
+            const opacityDisplay = document.getElementById('opacityDisplay');
+            opacityDisplay.textContent = '90%';
             console.log('✅ Reset to safe opacity level (0.9)');
         }
         
         async function testCapture() {
-            // Flash the window to help with testing - make it more visible during very low opacity
+            // Flash the window to help with testing
             const originalBg = document.body.style.background;
             const flashColor = currentOpacity < 0.3 ? '#00ff00' : '#ff0000';
             
@@ -254,7 +300,7 @@
             
             setTimeout(() => {
                 document.body.style.background = originalBg;
-            }, 1000); // Longer flash for very transparent windows
+            }, 1000);
             
             console.log(`Testing capture protection at opacity ${currentOpacity} - window flashing ${flashColor}`);
             console.log('Try taking a screenshot NOW to test if this window is hidden');
@@ -265,20 +311,11 @@
         }
         
         // Log protection status
-        console.log('Overlay loaded');
+        console.log('Stealth overlay loaded');
         console.log('Content protection should be active');
         console.log('Test with: PrtSc, Snipping Tool, Zoom share, OBS');
         console.log('Hotkey: Ctrl+Shift+H to hide/show window');
-        
-        // Display current time (for testing)
-        function updateTime() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString();
-            document.title = `Stealth Overlay - ${timeStr}`;
-        }
-        
-        setInterval(updateTime, 1000);
-        updateTime();
+        console.log('Click the gear icon for developer controls');
     </script>
 </body>
 </html>
