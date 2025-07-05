@@ -1,0 +1,4 @@
+2025-07-05 21:25:33 [ERROR]: Error: spawn sox ENOENT
+    at Process.onexit (node:internal/child_process:283:19)
+    at onErrorNT (node:internal/child_process:476:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)

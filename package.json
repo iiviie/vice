@@ -1,40 +1,59 @@
 {
-    "name": "stealth-overlay",
+    "name": "stealth-ai-overlay",
     "version": "1.0.0",
-    "description": "A stealth overlay window that's hidden from screen capture on Windows 11",
+    "description": "AI-powered stealth overlay with screen capture protection and multimodal AI integration",
     "main": "main.js",
     "scripts": {
       "start": "electron .",
+      "dev": "electron . --dev",
       "build": "electron-builder",
-      "dist": "electron-builder --publish=never"
+      "dist": "electron-builder --publish=never",
+      "clean": "rimraf dist node_modules",
+      "postinstall": "electron-builder install-app-deps"
     },
     "keywords": [
       "electron",
       "overlay",
       "screen-capture",
       "stealth",
-      "windows"
+      "ai",
+      "gemini",
+      "multimodal",
+      "audio-transcription",
+      "screenshot"
     ],
     "author": "Your Name",
     "license": "MIT",
+    "dependencies": {
+      "@google/generative-ai": "^0.17.1",
+      "dotenv": "^16.4.5",
+      "node-record-lpcm16": "^1.0.1",
+      "screenshot-desktop": "^1.15.0",
+      "jimp": "^0.22.12",
+      "winston": "^3.11.0"
+    },
     "devDependencies": {
       "electron": "^27.0.0",
-      "electron-builder": "^24.0.0"
+      "electron-builder": "^24.0.0",
+      "rimraf": "^5.0.5"
     },
     "build": {
-      "appId": "com.yourcompany.stealth-overlay",
-      "productName": "Stealth Overlay",
+      "appId": "com.yourcompany.stealth-ai-overlay",
+      "productName": "Stealth AI Overlay",
       "directories": {
         "output": "dist"
       },
       "files": [
         "main.js",
         "overlay.html",
-        "package.json"
+        "src/**/*",
+        "assets/**/*",
+        "package.json",
+        ".env"
       ],
       "win": {
         "target": "nsis",
-        "icon": "assets/icon.ico"
+        "icon": "assets/icons/icon.ico"
       },
       "nsis": {
         "oneClick": false,
