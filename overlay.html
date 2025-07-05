@@ -51,6 +51,17 @@
             max-width: 250px;
         }
         
+        .hotkey-info {
+            font-size: 9px;
+            color: #00d4ff;
+            text-align: center;
+            margin-top: 8px;
+            padding: 3px 6px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 4px;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+        
         .controls {
             position: absolute;
             top: 5px;
@@ -125,6 +136,13 @@
         .test-btn:hover {
             background: #34495e;
         }
+        
+        .warning {
+            color: #e74c3c;
+            font-size: 9px;
+            margin-top: 5px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -149,59 +167,108 @@
             • Desktop capture APIs
         </div>
         
+        <div class="hotkey-info">
+            Press <strong>Ctrl+Shift+H</strong> to hide/show
+        </div>
+        
         <!-- Test controls -->
         <div class="test-area">
             <button class="test-btn" onclick="toggleAlwaysOnTop()">Toggle Always On Top</button>
             <button class="test-btn" onclick="testCapture()">Test Protection</button>
+            <button class="test-btn" onclick="toggleOpacity()">Lower Opacity</button>
+            <button class="test-btn" onclick="resetOpacity()">Reset Opacity</button>
+            <div class="warning" id="transparencyWarning" style="display: none;">
+                ⚠️ Transparency may break protection!
+            </div>
         </div>
     </div>
 
     <script>
-        const { remote } = require('electron');
-        const currentWindow = remote.getCurrentWindow();
+        const { ipcRenderer } = require('electron');
         
-        // Window control functions
-        function minimizeWindow() {
-            currentWindow.minimize();
+        // Window control functions using IPC
+        async function minimizeWindow() {
+            await ipcRenderer.invoke('minimize-window');
         }
         
-        function closeWindow() {
-            currentWindow.close();
+        async function closeWindow() {
+            await ipcRenderer.invoke('close-window');
         }
         
         let alwaysOnTop = true;
-        function toggleAlwaysOnTop() {
-            alwaysOnTop = !alwaysOnTop;
-            currentWindow.setAlwaysOnTop(alwaysOnTop);
+        async function toggleAlwaysOnTop() {
+            alwaysOnTop = await ipcRenderer.invoke('toggle-always-on-top');
             console.log('Always on top:', alwaysOnTop);
         }
         
-        function testCapture() {
-            // Flash the window to help with testing
+        let currentOpacity = 0.9;
+        async function toggleOpacity() {
+            const warning = document.getElementById('transparencyWarning');
+            
+            if (currentOpacity === 0.9) {
+                currentOpacity = 0.7;
+                warning.style.display = 'block';
+                warning.textContent = '⚠️ Transparency may break protection!';
+                console.log('⚠️ WARNING: Higher transparency may affect capture protection!');
+            } else if (currentOpacity === 0.7) {
+                currentOpacity = 0.5;
+                warning.textContent = '⚠️ DANGER: Very transparent!';
+                console.log('⚠️ DANGER: Very transparent - protection may be broken!');
+            } else if (currentOpacity === 0.5) {
+                currentOpacity = 0.3;
+                warning.textContent = '🚨 EXTREME: Almost invisible!';
+                console.log('🚨 EXTREME: Almost invisible - protection likely broken!');
+            } else if (currentOpacity === 0.3) {
+                currentOpacity = 0.1;
+                warning.textContent = '💀 CRITICAL: Barely visible!';
+                console.log('💀 CRITICAL: Barely visible - protection definitely broken!');
+            } else if (currentOpacity === 0.1) {
+                currentOpacity = 0.05;
+                warning.textContent = '👻 GHOST MODE: Almost gone!';
+                console.log('👻 GHOST MODE: Almost transparent - this should break everything!');
+            } else {
+                currentOpacity = 0.9;
+                warning.style.display = 'none';
+                console.log('✅ Back to safe opacity level');
+            }
+            
+            await ipcRenderer.invoke('set-opacity', currentOpacity);
+            console.log('Current opacity:', currentOpacity);
+            console.log('TEST NOW: Take a screenshot or start screen share to test protection!');
+        }
+        
+        async function resetOpacity() {
+            currentOpacity = 0.9;
+            await ipcRenderer.invoke('set-opacity', currentOpacity);
+            const warning = document.getElementById('transparencyWarning');
+            warning.style.display = 'none';
+            console.log('✅ Reset to safe opacity level (0.9)');
+        }
+        
+        async function testCapture() {
+            // Flash the window to help with testing - make it more visible during very low opacity
             const originalBg = document.body.style.background;
-            document.body.style.background = '#ff0000';
+            const flashColor = currentOpacity < 0.3 ? '#00ff00' : '#ff0000';
+            
+            document.body.style.background = flashColor;
             
             setTimeout(() => {
                 document.body.style.background = originalBg;
-            }, 500);
+            }, 1000); // Longer flash for very transparent windows
             
-            console.log('Testing capture protection - window should flash red');
-            console.log('Try taking a screenshot now to test if this window is hidden');
+            console.log(`Testing capture protection at opacity ${currentOpacity} - window flashing ${flashColor}`);
+            console.log('Try taking a screenshot NOW to test if this window is hidden');
+            
+            // Get native handle for debugging
+            const hwnd = await ipcRenderer.invoke('get-native-handle');
+            console.log('Native window handle (HWND):', hwnd);
         }
         
         // Log protection status
         console.log('Overlay loaded');
         console.log('Content protection should be active');
         console.log('Test with: PrtSc, Snipping Tool, Zoom share, OBS');
-        
-        // Optional: Listen for window events
-        currentWindow.on('focus', () => {
-            console.log('Window focused');
-        });
-        
-        currentWindow.on('blur', () => {
-            console.log('Window blurred');
-        });
+        console.log('Hotkey: Ctrl+Shift+H to hide/show window');
         
         // Display current time (for testing)
         function updateTime() {

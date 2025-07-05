@@ -1,8 +1,9 @@
 // main.js - Main process for stealth overlay
-const { app, BrowserWindow, screen } = require('electron');
+const { app, BrowserWindow, screen, globalShortcut, ipcMain } = require('electron');
 const path = require('path');
 
 let overlayWindow = null;
+let isVisible = true;
 
 function createOverlay() {
   // Get primary display dimensions
@@ -26,6 +27,7 @@ function createOverlay() {
     // CRITICAL: Use opaque background - transparent windows break content protection
     transparent: false,     // Must be false for content protection to work
     backgroundColor: '#1e1e1e', // Dark opaque background
+    opacity: 0.9,           // Semi-transparent overlay (this is safe)
     
     // Window behavior
     focusable: true,        // Can receive focus
@@ -34,7 +36,8 @@ function createOverlay() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      webSecurity: false
+      webSecurity: false,
+      enableRemoteModule: true
     }
   });
 
@@ -75,7 +78,78 @@ function createOverlay() {
   overlayWindow.on('blur', () => {
     console.log('Overlay blurred');
   });
+
+  // Register global hotkey to toggle visibility (Ctrl+Shift+H)
+  const toggleHotkey = 'CommandOrControl+Shift+H';
+  const success = globalShortcut.register(toggleHotkey, () => {
+    toggleWindowVisibility();
+  });
+
+  if (success) {
+    console.log(`Global hotkey registered: ${toggleHotkey}`);
+  } else {
+    console.log('Failed to register global hotkey');
+  }
 }
+
+// Function to toggle window visibility
+function toggleWindowVisibility() {
+  if (!overlayWindow) return;
+
+  if (isVisible) {
+    overlayWindow.hide();
+    isVisible = false;
+    console.log('Window hidden via hotkey');
+  } else {
+    overlayWindow.show();
+    isVisible = true;
+    console.log('Window shown via hotkey');
+  }
+}
+
+// IPC handlers for renderer process communication
+ipcMain.handle('minimize-window', () => {
+  if (overlayWindow) {
+    overlayWindow.minimize();
+  }
+});
+
+ipcMain.handle('close-window', () => {
+  if (overlayWindow) {
+    overlayWindow.close();
+  }
+});
+
+ipcMain.handle('toggle-always-on-top', () => {
+  if (overlayWindow) {
+    const isAlwaysOnTop = overlayWindow.isAlwaysOnTop();
+    overlayWindow.setAlwaysOnTop(!isAlwaysOnTop);
+    return !isAlwaysOnTop;
+  }
+  return false;
+});
+
+ipcMain.handle('set-opacity', (event, opacity) => {
+  if (overlayWindow) {
+    overlayWindow.setOpacity(opacity);
+    return true;
+  }
+  return false;
+});
+
+ipcMain.handle('get-native-handle', () => {
+  if (overlayWindow) {
+    try {
+      const handleBuffer = overlayWindow.getNativeWindowHandle();
+      const hwnd = handleBuffer.readInt32LE(0);
+      return hwnd.toString(16);
+    } catch (error) {
+      console.error('Could not get native handle:', error);
+      return null;
+    }
+  }
+  return null;
+});
 
 // App event handlers
 app.whenReady().then(() => {
@@ -98,6 +172,13 @@ app.on('activate', () => {
 // Handle app quit
 app.on('before-quit', () => {
   console.log('App quitting...');
+  // Unregister all global shortcuts
+  globalShortcut.unregisterAll();
+});
+
+app.on('will-quit', () => {
+  // Unregister all global shortcuts
+  globalShortcut.unregisterAll();
 });
 
 // Export for potential use
