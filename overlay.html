@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Stealth Overlay</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e1e;
+            color: #ffffff;
+            overflow: hidden;
+            user-select: none;
+            -webkit-app-region: drag; /* Makes entire window draggable */
+        }
+        
+        .overlay-container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            border: 1px solid #404040;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+        
+        .status {
+            font-size: 12px;
+            color: #90ee90;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .info {
+            font-size: 10px;
+            color: #888;
+            text-align: center;
+            line-height: 1.4;
+            max-width: 250px;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            -webkit-app-region: no-drag; /* Buttons should not drag */
+        }
+        
+        .control-btn {
+            background: #404040;
+            border: none;
+            color: #fff;
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 2px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .control-btn:hover {
+            background: #505050;
+        }
+        
+        .close-btn:hover {
+            background: #e74c3c;
+        }
+        
+        .minimize-btn:hover {
+            background: #f39c12;
+        }
+        
+        .indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff00;
+            box-shadow: 0 0 6px rgba(0, 255, 0, 0.6);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .test-area {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            -webkit-app-region: no-drag;
+        }
+        
+        .test-btn {
+            background: #2c3e50;
+            border: 1px solid #34495e;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            margin: 2px;
+        }
+        
+        .test-btn:hover {
+            background: #34495e;
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay-container">
+        <!-- Status indicator -->
+        <div class="indicator" title="Protected from capture"></div>
+        
+        <!-- Window controls -->
+        <div class="controls">
+            <button class="control-btn minimize-btn" onclick="minimizeWindow()" title="Minimize">−</button>
+            <button class="control-btn close-btn" onclick="closeWindow()" title="Close">×</button>
+        </div>
+        
+        <!-- Main content -->
+        <div class="title">🛡️ Stealth Overlay</div>
+        <div class="status">Protected from Screen Capture</div>
+        <div class="info">
+            This window is hidden from:<br>
+            • Screenshots (PrtSc, Snipping Tool)<br>
+            • Screen sharing (Zoom, Teams, Discord)<br>
+            • Screen recording (OBS, Camtasia)<br>
+            • Desktop capture APIs
+        </div>
+        
+        <!-- Test controls -->
+        <div class="test-area">
+            <button class="test-btn" onclick="toggleAlwaysOnTop()">Toggle Always On Top</button>
+            <button class="test-btn" onclick="testCapture()">Test Protection</button>
+        </div>
+    </div>
+
+    <script>
+        const { remote } = require('electron');
+        const currentWindow = remote.getCurrentWindow();
+        
+        // Window control functions
+        function minimizeWindow() {
+            currentWindow.minimize();
+        }
+        
+        function closeWindow() {
+            currentWindow.close();
+        }
+        
+        let alwaysOnTop = true;
+        function toggleAlwaysOnTop() {
+            alwaysOnTop = !alwaysOnTop;
+            currentWindow.setAlwaysOnTop(alwaysOnTop);
+            console.log('Always on top:', alwaysOnTop);
+        }
+        
+        function testCapture() {
+            // Flash the window to help with testing
+            const originalBg = document.body.style.background;
+            document.body.style.background = '#ff0000';
+            
+            setTimeout(() => {
+                document.body.style.background = originalBg;
+            }, 500);
+            
+            console.log('Testing capture protection - window should flash red');
+            console.log('Try taking a screenshot now to test if this window is hidden');
+        }
+        
+        // Log protection status
+        console.log('Overlay loaded');
+        console.log('Content protection should be active');
+        console.log('Test with: PrtSc, Snipping Tool, Zoom share, OBS');
+        
+        // Optional: Listen for window events
+        currentWindow.on('focus', () => {
+            console.log('Window focused');
+        });
+        
+        currentWindow.on('blur', () => {
+            console.log('Window blurred');
+        });
+        
+        // Display current time (for testing)
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            document.title = `Stealth Overlay - ${timeStr}`;
+        }
+        
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body>
+</html>

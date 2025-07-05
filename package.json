@@ -1,0 +1,44 @@
+{
+    "name": "stealth-overlay",
+    "version": "1.0.0",
+    "description": "A stealth overlay window that's hidden from screen capture on Windows 11",
+    "main": "main.js",
+    "scripts": {
+      "start": "electron .",
+      "build": "electron-builder",
+      "dist": "electron-builder --publish=never"
+    },
+    "keywords": [
+      "electron",
+      "overlay",
+      "screen-capture",
+      "stealth",
+      "windows"
+    ],
+    "author": "Your Name",
+    "license": "MIT",
+    "devDependencies": {
+      "electron": "^27.0.0",
+      "electron-builder": "^24.0.0"
+    },
+    "build": {
+      "appId": "com.yourcompany.stealth-overlay",
+      "productName": "Stealth Overlay",
+      "directories": {
+        "output": "dist"
+      },
+      "files": [
+        "main.js",
+        "overlay.html",
+        "package.json"
+      ],
+      "win": {
+        "target": "nsis",
+        "icon": "assets/icon.ico"
+      },
+      "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true
+      }
+    }
+  }
