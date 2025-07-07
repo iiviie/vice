@@ -10,9 +10,10 @@ const ScreenCapturer = require('./src/screen/capturer');
 const Logger = require('./src/utils/logger');
 
 let overlayWindow = null;
-let aiInputWindow = null; // Track the AI input window
+let aiInputWindow = null;
 let isVisible = true;
 let isRecording = false;
+let allWindowsHidden = false; // Track global hide state
 let geminiClient = null;
 let audioRecorder = null;
 let screenCapturer = null;
@@ -107,7 +108,7 @@ function createOverlay() {
 }
 
 function registerAIHotkeys() {
-  // Hotkey 1: Toggle window visibility (Ctrl+Shift+H)
+  // Hotkey 1: Toggle overlay window visibility (Ctrl+Shift+H)
   const hideSuccess = globalShortcut.register('CommandOrControl+Shift+H', () => {
     toggleWindowVisibility();
   });
@@ -127,31 +128,66 @@ function registerAIHotkeys() {
     captureAndAnalyzeScreen();
   });
 
+  // Hotkey 5: Global Hide/Show All Windows (Ctrl+\)
+  const globalHideSuccess = globalShortcut.register('CommandOrControl+\\', () => {
+    toggleAllWindows();
+  });
+
   console.log('Hotkey registration results:');
-  console.log('  Hide/Show (Ctrl+Shift+H):', hideSuccess);
+  console.log('  Hide/Show Overlay (Ctrl+Shift+H):', hideSuccess);
   console.log('  Ask AI (Ctrl+Shift+A):', askSuccess);
   console.log('  Record Audio (Ctrl+Shift+R):', recordSuccess);
   console.log('  Screenshot (Ctrl+Shift+S):', screenshotSuccess);
+  console.log('  Global Hide/Show (Ctrl+\\):', globalHideSuccess);
   
-  if (hideSuccess && askSuccess && recordSuccess && screenshotSuccess) {
+  if (hideSuccess && askSuccess && recordSuccess && screenshotSuccess && globalHideSuccess) {
     console.log('✅ All AI hotkeys registered successfully');
   } else {
     console.error('❌ Some hotkeys failed to register - may be conflicts with other apps');
   }
 }
 
-// Function to toggle window visibility
+// Function to toggle overlay window visibility
 function toggleWindowVisibility() {
   if (!overlayWindow) return;
 
   if (isVisible) {
     overlayWindow.hide();
     isVisible = false;
-    console.log('Window hidden via hotkey');
+    console.log('Overlay window hidden via hotkey');
   } else {
     overlayWindow.show();
     isVisible = true;
-    console.log('Window shown via hotkey');
+    console.log('Overlay window shown via hotkey');
+  }
+}
+
+// Function to toggle ALL windows visibility
+function toggleAllWindows() {
+  console.log('🌐 Global hide/show hotkey pressed (Ctrl+\\)');
+  
+  if (allWindowsHidden) {
+    // Show all windows
+    if (overlayWindow) {
+      overlayWindow.show();
+      isVisible = true;
+    }
+    if (aiInputWindow) {
+      aiInputWindow.show();
+    }
+    allWindowsHidden = false;
+    console.log('👁️ All windows shown');
+  } else {
+    // Hide all windows
+    if (overlayWindow) {
+      overlayWindow.hide();
+      isVisible = false;
+    }
+    if (aiInputWindow) {
+      aiInputWindow.hide();
+    }
+    allWindowsHidden = true;
+    console.log('🙈 All windows hidden');
   }
 }
 
@@ -160,6 +196,11 @@ async function showAITextInput() {
   if (!overlayWindow) return;
   
   console.log('🤖 AI Text Input hotkey pressed (Ctrl+Shift+A)');
+  
+  // If all windows are globally hidden, show them first
+  if (allWindowsHidden) {
+    toggleAllWindows();
+  }
   
   // If AI window already exists, toggle it instead of creating new one
   if (aiInputWindow) {
@@ -175,19 +216,27 @@ async function showAITextInput() {
   }
   
   // Create a new stealth-protected window for AI input
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+  
   aiInputWindow = new BrowserWindow({
-    width: 600,
-    height: 400,
+    width: 700,
+    height: 500,
+    x: Math.floor((width - 700) / 2), // Center horizontally
+    y: Math.floor((height - 500) / 2), // Center vertically
     modal: false,
     parent: overlayWindow,
     show: false,
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
+    resizable: true,
+    minWidth: 500,
+    minHeight: 400,
     
     // CRITICAL: Same stealth protection as main overlay
     transparent: false,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#0a0a0a',
     
     webPreferences: {
       nodeIntegration: true,
@@ -270,20 +319,28 @@ async function captureAndAnalyzeScreen() {
   
   try {
     // Temporarily hide overlay to avoid capturing itself
-    const wasVisible = isVisible;
-    if (wasVisible) {
+    const wasOverlayVisible = isVisible;
+    const wasAIVisible = aiInputWindow && aiInputWindow.isVisible();
+    
+    if (wasOverlayVisible) {
       overlayWindow.hide();
     }
+    if (wasAIVisible) {
+      aiInputWindow.hide();
+    }
     
-    // Wait a moment for window to hide
+    // Wait a moment for windows to hide
     await new Promise(resolve => setTimeout(resolve, 200));
     
     // Capture screen
     const screenshot = await screenCapturer.captureScreen();
     
-    // Restore overlay visibility
-    if (wasVisible) {
+    // Restore window visibility
+    if (wasOverlayVisible) {
       overlayWindow.show();
+    }
+    if (wasAIVisible) {
+      aiInputWindow.show();
     }
     
     // Send to AI for analysis
@@ -315,6 +372,68 @@ ipcMain.handle('process-ai-text', async (event, text) => {
     return { success: true, response };
   } catch (error) {
     console.error('AI text processing failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('take-screenshot-and-analyze', async (event) => {
+  try {
+    console.log('📸 Screenshot requested from chat interface');
+    
+    if (!screenCapturer || !geminiClient) {
+      throw new Error('Screen capturer or Gemini client not initialized');
+    }
+
+    // Temporarily hide all windows to avoid capturing them
+    const wasOverlayVisible = overlayWindow && overlayWindow.isVisible();
+    const wasAIVisible = aiInputWindow && aiInputWindow.isVisible();
+    
+    if (wasOverlayVisible) {
+      overlayWindow.hide();
+    }
+    if (wasAIVisible) {
+      aiInputWindow.hide();
+    }
+    
+    // Wait for windows to hide
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Capture screen
+    const screenshot = await screenCapturer.captureScreen();
+    
+    // Restore window visibility
+    if (wasOverlayVisible) {
+      overlayWindow.show();
+    }
+    if (wasAIVisible) {
+      aiInputWindow.show();
+      aiInputWindow.focus();
+    }
+    
+    // Send to AI for analysis
+    const aiResponse = await geminiClient.processImage(screenshot, 'Analyze this screenshot and describe what you see. Focus on the main content, UI elements, and any text that might be relevant.');
+    
+    // Convert screenshot to base64 for display
+    const screenshotBase64 = screenshot.toString('base64');
+    
+    return { 
+      success: true, 
+      response: aiResponse,
+      screenshot: screenshotBase64
+    };
+    
+  } catch (error) {
+    console.error('Screenshot analysis failed:', error);
+    
+    // Restore windows on error
+    if (overlayWindow && !overlayWindow.isVisible()) {
+      overlayWindow.show();
+    }
+    if (aiInputWindow && !aiInputWindow.isVisible()) {
+      aiInputWindow.show();
+      aiInputWindow.focus();
+    }
+    
     return { success: false, error: error.message };
   }
 });
