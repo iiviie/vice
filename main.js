@@ -151,7 +151,6 @@ function registerAIHotkeys() {
 
 // Register global shortcut for audio toggle (Ctrl+Shift+Space)
 function registerAudioToggleShortcut() {
-  const { globalShortcut } = require('electron');
   const shortcut = 'CommandOrControl+Shift+Space';
   const success = globalShortcut.register(shortcut, async () => {
     const now = Date.now();
@@ -159,41 +158,85 @@ function registerAudioToggleShortcut() {
     lastAudioToggle = now;
 
     if (audioRecorder && !isRecording) {
-      console.log('Toggle-record: START');
+      console.log('🎵 Global Toggle-record: START');
       try {
         await audioRecorder.startRecording();
         isRecording = true;
+        console.log('🎵 System audio recording started via global hotkey');
+        
+        // Notify chat interface of recording status
+        if (aiInputWindow && aiInputWindow.webContents) {
+          aiInputWindow.webContents.send('recording-status-changed', true);
+        }
+        
       } catch (err) {
-        console.error('Toggle-record: Failed to start recording', err);
+        console.error('Global Toggle-record: Failed to start recording', err);
       }
     } else if (audioRecorder && isRecording) {
-      console.log('Toggle-record: STOP');
+      console.log('🎵 Global Toggle-record: STOP');
       try {
         const audioFile = await audioRecorder.stopRecording();
         isRecording = false;
         console.log('Audio file saved:', audioFile);
-        // --- Transcribe with Whisper ---
+        
+        // Notify chat interface recording stopped
+        if (aiInputWindow && aiInputWindow.webContents) {
+          aiInputWindow.webContents.send('recording-status-changed', false);
+        }
+        
+        // --- Send audio directly to Gemini (no transcription) ---
         try {
-          const transcription = await audioRecorder.transcribeAudio(audioFile);
-          console.log('Transcription:', transcription);
-          // Optionally: send to Gemini
-          if (geminiClient) {
-            const aiResponse = await geminiClient.processText(transcription);
-            console.log('Gemini AI response:', aiResponse);
-            // Optionally: show in overlay UI
+          console.log('Sending system audio directly to Gemini...');
+          
+          // Read the audio file
+          const fs = require('fs');
+          const audioBuffer = fs.readFileSync(audioFile);
+          
+          // Send directly to Gemini for audio processing
+          const aiResponse = await geminiClient.processAudio(audioBuffer, 'audio/wav', 'Please listen to this system audio and provide a helpful response about what you heard.');
+          
+          console.log('Gemini AI audio response received');
+          
+          // Send to chat interface if open
+          if (aiInputWindow && aiInputWindow.isVisible()) {
+            aiInputWindow.webContents.send('add-audio-result', {
+              response: aiResponse,
+              audioFile: audioFile
+            });
+          } else {
+            // Show in overlay or console
+            console.log('📻 Audio Analysis:', aiResponse.substring(0, 100) + '...');
           }
-        } catch (transcribeErr) {
-          console.error('Transcription failed:', transcribeErr);
+          
+          // Clean up audio file after processing
+          await audioRecorder.cleanupAudioFile(audioFile);
+          
+        } catch (audioProcessErr) {
+          console.error('Audio processing failed:', audioProcessErr);
+          
+          // Send error to chat if open
+          if (aiInputWindow && aiInputWindow.isVisible()) {
+            aiInputWindow.webContents.send('add-audio-result', {
+              response: `❌ Audio processing failed: ${audioProcessErr.message}`,
+              audioFile: null
+            });
+          }
         }
       } catch (err) {
-        console.error('Toggle-record: Failed to stop recording', err);
+        console.error('Global Toggle-record: Failed to stop recording', err);
+        isRecording = false;
+        
+        // Notify chat interface recording stopped (error case)
+        if (aiInputWindow && aiInputWindow.webContents) {
+          aiInputWindow.webContents.send('recording-status-changed', false);
+        }
       }
     }
   });
   if (success) {
-    console.log('Audio toggle shortcut registered:', shortcut);
+    console.log('✅ Audio toggle shortcut registered:', shortcut);
   } else {
-    console.error('Failed to register audio toggle shortcut:', shortcut);
+    console.error('❌ Failed to register audio toggle shortcut:', shortcut);
   }
 }
 
@@ -315,45 +358,11 @@ async function showAITextInput() {
 
 async function toggleAudioRecording() {
   console.log('🎵 Audio Recording hotkey pressed (Ctrl+Shift+R)');
+  console.log('⚠️ Audio recording now handled in chat interface - use Ctrl+Shift+A to open chat and click audio button');
   
-  if (!audioRecorder) {
-    console.log('❌ Audio recorder not initialized');
-    return;
-  }
-
-  if (isRecording) {
-    console.log('Stopping audio recording...');
-    try {
-      const audioFile = await audioRecorder.stopRecording();
-      const transcription = await audioRecorder.transcribeAudio(audioFile);
-      
-      // Send transcription to AI
-      const aiResponse = await geminiClient.processText(transcription);
-      
-      // Show result in overlay
-      overlayWindow.webContents.send('show-ai-response', {
-        type: 'audio',
-        input: transcription,
-        response: aiResponse
-      });
-      
-      isRecording = false;
-      overlayWindow.webContents.send('update-recording-status', false);
-      
-    } catch (error) {
-      console.log('❌ Audio recording failed:', error.message);
-      overlayWindow.webContents.send('show-error', 'Audio recording failed: ' + error.message);
-    }
-  } else {
-    console.log('Starting audio recording...');
-    try {
-      await audioRecorder.startRecording();
-      isRecording = true;
-      overlayWindow.webContents.send('update-recording-status', true);
-    } catch (error) {
-      console.log('❌ Failed to start recording:', error.message);
-      overlayWindow.webContents.send('show-error', 'Failed to start recording: ' + error.message);
-    }
+  // Show AI chat if not visible
+  if (!aiInputWindow || !aiInputWindow.isVisible()) {
+    showAITextInput();
   }
 }
 
@@ -396,17 +405,18 @@ async function captureAndAnalyzeScreen() {
     // Send to AI for analysis
     const aiResponse = await geminiClient.processImage(screenshot);
     
-    // Show result in overlay
-    overlayWindow.webContents.send('show-ai-response', {
-      type: 'image',
-      input: 'Screenshot captured',
-      response: aiResponse,
-      image: screenshot
-    });
+    // Show result in chat if available, otherwise in console
+    if (aiInputWindow && aiInputWindow.isVisible()) {
+      aiInputWindow.webContents.send('add-screenshot-result', {
+        response: aiResponse,
+        screenshot: screenshot.toString('base64')
+      });
+    } else {
+      console.log('📸 Screenshot analysis:', aiResponse.substring(0, 100) + '...');
+    }
     
   } catch (error) {
     console.log('❌ Screen capture failed:', error.message);
-    overlayWindow.webContents.send('show-error', 'Screen capture failed: ' + error.message);
     
     // Restore overlay visibility on error
     if (overlayWindow && !isVisible) {
@@ -484,6 +494,93 @@ ipcMain.handle('take-screenshot-and-analyze', async (event) => {
       aiInputWindow.focus();
     }
     
+    return { success: false, error: error.message };
+  }
+});
+
+// NEW: System audio recording IPC handlers
+ipcMain.handle('start-system-audio-recording', async (event) => {
+  try {
+    console.log('🎵 System audio recording start requested from chat interface');
+    
+    if (!audioRecorder) {
+      throw new Error('Audio recorder not initialized');
+    }
+
+    if (isRecording) {
+      throw new Error('Recording already in progress');
+    }
+
+    const recordingFile = await audioRecorder.startRecording();
+    isRecording = true;
+    
+    console.log('✅ System audio recording started:', recordingFile);
+    return { success: true, message: 'System audio recording started via VB Cable' };
+    
+  } catch (error) {
+    console.error('❌ Failed to start system audio recording:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('stop-system-audio-recording', async (event) => {
+  try {
+    console.log('🛑 Stop system audio recording requested from chat interface');
+    
+    if (!audioRecorder) {
+      throw new Error('Audio recorder not initialized');
+    }
+
+    if (!isRecording) {
+      throw new Error('No recording in progress');
+    }
+
+    const audioFile = await audioRecorder.stopRecording();
+    isRecording = false;
+    
+    console.log('✅ System audio file saved:', audioFile);
+    
+    // Process audio with Gemini
+    try {
+      console.log('Sending system audio directly to Gemini...');
+      
+      const fs = require('fs');
+      const audioBuffer = fs.readFileSync(audioFile);
+      
+      const aiResponse = await geminiClient.processAudio(audioBuffer, 'audio/wav', 'Please listen to this system audio and provide a helpful response about what you heard.');
+      
+      console.log('✅ Gemini AI system audio response received');
+      
+      // Send result to chat interface
+      if (event.sender) {
+        event.sender.send('add-audio-result', {
+          response: aiResponse,
+          audioFile: audioFile
+        });
+      }
+      
+      // Clean up audio file
+      await audioRecorder.cleanupAudioFile(audioFile);
+      
+      return { success: true, message: 'System audio processed successfully' };
+      
+    } catch (audioProcessErr) {
+      console.error('❌ System audio processing failed:', audioProcessErr);
+      
+      // Send error to chat
+      if (event.sender) {
+        event.sender.send('add-audio-result', {
+          response: `❌ Audio processing failed: ${audioProcessErr.message}`,
+          audioFile: null
+        });
+      }
+      
+      return { success: false, error: audioProcessErr.message };
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to stop system audio recording:', error);
+    isRecording = false;
     return { success: false, error: error.message };
   }
 });

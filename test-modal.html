@@ -6,11 +6,11 @@
     <style>
         * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
         
         body {
-            margin: 0;
-            padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0a0a0a;
             color: #ffffff;
@@ -30,13 +30,42 @@
             padding: 0 15px;
             -webkit-app-region: drag;
             flex-shrink: 0;
-            z-index: 100;
+            position: relative;
+            z-index: 1000;
         }
         
         .window-title {
             font-size: 13px;
             color: #888;
             font-weight: 500;
+        }
+        
+        .window-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            -webkit-app-region: no-drag;
+        }
+        
+        .action-btn {
+            background: rgba(26, 26, 26, 0.9);
+            border: 1px solid #3a3a3a;
+            color: #888;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .action-btn:hover {
+            background: rgba(42, 42, 42, 0.9);
+            color: #fff;
+            border-color: #4a4a4a;
         }
         
         .close-btn {
@@ -60,33 +89,13 @@
             background: #333;
         }
         
-        .chat-container {
+        .main-container {
             flex: 1;
             display: flex;
             flex-direction: column;
             min-height: 0;
             -webkit-app-region: no-drag;
             position: relative;
-        }
-        
-        .chat-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid #2a2a2a;
-            background: #0a0a0a;
-            flex-shrink: 0;
-        }
-        
-        .chat-header h2 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
-            color: #fff;
-        }
-        
-        .chat-header p {
-            margin: 4px 0 0 0;
-            font-size: 13px;
-            color: #888;
         }
         
         .chat-messages {
@@ -98,6 +107,36 @@
             gap: 16px;
             min-height: 0;
             background: #0a0a0a;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #888;
+        }
+        
+        .empty-subtitle {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #666;
         }
         
         .message {
@@ -123,7 +162,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
             flex-shrink: 0;
             margin: 0 10px;
@@ -230,7 +269,7 @@
             }
         }
         
-        .input-container {
+        .input-section {
             padding: 16px 20px;
             border-top: 1px solid #2a2a2a;
             background: #0a0a0a;
@@ -254,7 +293,7 @@
             box-shadow: 0 0 0 1px rgba(74, 74, 74, 0.3);
         }
         
-        .screenshot-btn {
+        .audio-btn {
             background: #2a2a2a;
             border: 1px solid #3a3a3a;
             color: #888;
@@ -270,13 +309,63 @@
             font-size: 16px;
         }
         
-        .screenshot-btn:hover:not(:disabled) {
+        .audio-btn:hover:not(:disabled) {
             background: #3a3a3a;
             color: #fff;
             border-color: #4a4a4a;
         }
         
-        .screenshot-btn:disabled {
+        .audio-btn.recording {
+            background: #ff4444;
+            color: white;
+            border-color: #ff6666;
+            animation: recordingPulse 1s infinite;
+        }
+        
+        .audio-btn:disabled {
+            background: #1a1a1a;
+            color: #555;
+            cursor: not-allowed;
+        }
+        
+        @keyframes recordingPulse {
+            0% { 
+                opacity: 1; 
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 0.8; 
+                transform: scale(1.05);
+            }
+            100% { 
+                opacity: 1; 
+                transform: scale(1);
+            }
+        }
+        
+        .input-btn {
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            color: #888;
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            font-size: 16px;
+        }
+        
+        .input-btn:hover:not(:disabled) {
+            background: #3a3a3a;
+            color: #fff;
+            border-color: #4a4a4a;
+        }
+        
+        .input-btn:disabled {
             background: #1a1a1a;
             color: #555;
             cursor: not-allowed;
@@ -330,66 +419,6 @@
             cursor: not-allowed;
         }
         
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #666;
-            text-align: center;
-            padding: 40px;
-        }
-        
-        .empty-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
-        
-        .empty-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #888;
-        }
-        
-        .empty-subtitle {
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        
-        .chat-actions {
-            position: absolute;
-            top: 16px;
-            right: 20px;
-            display: flex;
-            gap: 8px;
-            z-index: 10;
-        }
-        
-        .action-btn {
-            background: rgba(26, 26, 26, 0.9);
-            border: 1px solid #3a3a3a;
-            color: #888;
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            transition: all 0.2s ease;
-            backdrop-filter: blur(8px);
-        }
-        
-        .action-btn:hover {
-            background: rgba(42, 42, 42, 0.9);
-            color: #fff;
-            border-color: #4a4a4a;
-        }
-        
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -432,25 +461,52 @@
             backdrop-filter: blur(8px);
             pointer-events: none;
         }
+
+        .audio-status {
+            position: fixed;
+            top: 50px;
+            right: 20px;
+            background: #2a2a2a;
+            border: 1px solid #4a4a4a;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: #888;
+            z-index: 100;
+            display: none;
+        }
+
+        .audio-status.show {
+            display: block;
+        }
+
+        .audio-status.recording {
+            border-color: #ff4444;
+            color: #ff6666;
+            background: rgba(255, 68, 68, 0.1);
+        }
     </style>
 </head>
 <body>
     <div class="titlebar">
         <div class="window-title">AI Chat Assistant</div>
-        <button class="close-btn" onclick="window.close()">×</button>
-    </div>
-    
-    <div class="chat-container">
-        <div class="chat-actions">
+        <div class="window-controls">
             <button class="action-btn" onclick="clearChat()" title="Clear chat">🗑️</button>
             <button class="action-btn" onclick="exportChat()" title="Export chat">📤</button>
+            <button class="close-btn" onclick="window.close()">×</button>
         </div>
-        
+    </div>
+    
+    <div class="audio-status" id="audioStatus">
+        🎵 System audio recording active (Ctrl+Shift+Space to stop)
+    </div>
+    
+    <div class="main-container">
         <div class="chat-messages" id="chatMessages">
             <div class="empty-state" id="emptyState">
                 <div class="empty-icon">💬</div>
                 <div class="empty-title">Start a conversation</div>
-                <div class="empty-subtitle">Type a message or take a screenshot to get started.</div>
+                <div class="empty-subtitle">Type a message, take a screenshot, or use Ctrl+Shift+Space to record system audio.</div>
             </div>
         </div>
         
@@ -464,15 +520,18 @@
             </div>
         </div>
         
-        <div class="input-container">
+        <div class="input-section">
             <div class="input-wrapper" id="inputWrapper">
-                <button class="screenshot-btn" id="screenshotBtn" onclick="takeScreenshot()" title="Take screenshot">
+                <button class="audio-btn" id="audioBtn" onclick="toggleSystemAudioRecording()" title="Record system audio (Ctrl+Shift+Space)">
+                    🎵
+                </button>
+                <button class="input-btn screenshot-btn" id="screenshotBtn" onclick="takeScreenshot()" title="Take screenshot (Ctrl+Shift+S)">
                     📷
                 </button>
                 <textarea 
                     class="message-input" 
                     id="messageInput" 
-                    placeholder="Type a message or press Enter to take a screenshot..."
+                    placeholder="Type a message, record system audio, or take a screenshot..."
                     rows="1"
                     tabindex="0"
                 ></textarea>
@@ -483,7 +542,7 @@
         </div>
     </div>
     
-    <div class="hotkey-hint">Press Ctrl+\ to hide all windows</div>
+    <div class="hotkey-hint">Ctrl+Shift+Space: Record system audio • Ctrl+\: Hide all windows</div>
 
     <script>
         const { ipcRenderer } = require('electron');
@@ -491,29 +550,15 @@
         let isProcessing = false;
         let chatHistory = [];
         let messageId = 0;
+        let isSystemRecording = false;
         
-        // Load chat history on startup
-        loadChatHistory();
-        
+        // Don't load chat history on startup - start fresh each time for stealth
         function loadChatHistory() {
-            try {
-                const saved = localStorage.getItem('aiChatHistory');
-                if (saved) {
-                    chatHistory = JSON.parse(saved);
-                    renderChatHistory();
-                }
-            } catch (error) {
-                console.log('Failed to load chat history:', error);
-                chatHistory = [];
-            }
+            chatHistory = [];
         }
         
         function saveChatHistory() {
-            try {
-                localStorage.setItem('aiChatHistory', JSON.stringify(chatHistory));
-            } catch (error) {
-                console.log('Failed to save chat history:', error);
-            }
+            // Disabled for stealth - don't persist chat history
         }
         
         function renderChatHistory() {
@@ -590,6 +635,96 @@
             return div.innerHTML;
         }
         
+        async function toggleSystemAudioRecording() {
+            const audioBtn = document.getElementById('audioBtn');
+            
+            try {
+                if (isSystemRecording) {
+                    // Stop recording
+                    console.log('Stopping system audio recording via button...');
+                    audioBtn.disabled = true;
+                    audioBtn.textContent = '⏹️';
+                    
+                    const result = await ipcRenderer.invoke('stop-system-audio-recording');
+                    
+                    if (result.success) {
+                        console.log('System audio recording stopped successfully');
+                        // The main process will handle sending the audio to Gemini
+                        // and the result will come via IPC
+                    } else {
+                        console.error('Failed to stop recording:', result.error);
+                        
+                        const errorMessage = {
+                            id: ++messageId,
+                            type: 'ai',
+                            content: `❌ Stop Recording Error: ${result.error}`,
+                            timestamp: Date.now()
+                        };
+                        
+                        chatHistory.push(errorMessage);
+                        addMessageToDOM(errorMessage);
+                    }
+                    
+                } else {
+                    // Start recording
+                    console.log('Starting system audio recording via button...');
+                    
+                    const result = await ipcRenderer.invoke('start-system-audio-recording');
+                    
+                    if (result.success) {
+                        isSystemRecording = true;
+                        audioBtn.classList.add('recording');
+                        audioBtn.textContent = '🔴';
+                        console.log('System audio recording started successfully');
+                        
+                        // Show recording status
+                        const audioStatus = document.getElementById('audioStatus');
+                        audioStatus.classList.add('show', 'recording');
+                        
+                    } else {
+                        console.error('Failed to start recording:', result.error);
+                        
+                        const errorMessage = {
+                            id: ++messageId,
+                            type: 'ai',
+                            content: `❌ Start Recording Error: ${result.error}`,
+                            timestamp: Date.now()
+                        };
+                        
+                        chatHistory.push(errorMessage);
+                        addMessageToDOM(errorMessage);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Recording button error:', error);
+                
+                const errorMessage = {
+                    id: ++messageId,
+                    type: 'ai',
+                    content: `❌ Recording Error: ${error.message}`,
+                    timestamp: Date.now()
+                };
+                
+                chatHistory.push(errorMessage);
+                addMessageToDOM(errorMessage);
+                
+                // Reset button state
+                resetAudioButton();
+            }
+        }
+        
+        function resetAudioButton() {
+            const audioBtn = document.getElementById('audioBtn');
+            const audioStatus = document.getElementById('audioStatus');
+            
+            isSystemRecording = false;
+            audioBtn.classList.remove('recording');
+            audioBtn.textContent = '🎵';
+            audioBtn.disabled = false;
+            audioStatus.classList.remove('show', 'recording');
+        }
+        
         async function takeScreenshot() {
             if (isProcessing) return;
             
@@ -611,7 +746,6 @@
             
             chatHistory.push(screenshotMessage);
             addMessageToDOM(screenshotMessage);
-            saveChatHistory();
             
             // Disable screenshot button and show loading
             screenshotBtn.disabled = true;
@@ -638,7 +772,6 @@
                     
                     chatHistory.push(aiMessage);
                     addMessageToDOM(aiMessage);
-                    saveChatHistory();
                 } else {
                     const errorMessage = {
                         id: ++messageId,
@@ -649,7 +782,6 @@
                     
                     chatHistory.push(errorMessage);
                     addMessageToDOM(errorMessage);
-                    saveChatHistory();
                 }
             } catch (error) {
                 typingIndicator.classList.remove('show');
@@ -663,7 +795,6 @@
                 
                 chatHistory.push(errorMessage);
                 addMessageToDOM(errorMessage);
-                saveChatHistory();
             } finally {
                 isProcessing = false;
                 screenshotBtn.disabled = false;
@@ -695,7 +826,6 @@
             
             chatHistory.push(userMessage);
             addMessageToDOM(userMessage);
-            saveChatHistory();
             
             // Clear input and disable send
             input.value = '';
@@ -723,7 +853,6 @@
                     
                     chatHistory.push(aiMessage);
                     addMessageToDOM(aiMessage);
-                    saveChatHistory();
                 } else {
                     const errorMessage = {
                         id: ++messageId,
@@ -734,7 +863,6 @@
                     
                     chatHistory.push(errorMessage);
                     addMessageToDOM(errorMessage);
-                    saveChatHistory();
                 }
             } catch (error) {
                 typingIndicator.classList.remove('show');
@@ -748,7 +876,6 @@
                 
                 chatHistory.push(errorMessage);
                 addMessageToDOM(errorMessage);
-                saveChatHistory();
             } finally {
                 isProcessing = false;
                 sendBtn.disabled = false;
@@ -765,23 +892,22 @@
         }
         
         function clearChat() {
-            if (confirm('Are you sure you want to clear the chat history?')) {
-                chatHistory = [];
-                saveChatHistory();
-                
-                const messagesContainer = document.getElementById('chatMessages');
-                const existingMessages = messagesContainer.querySelectorAll('.message');
-                existingMessages.forEach(msg => msg.remove());
-                
-                document.getElementById('emptyState').style.display = 'flex';
-                
-                console.log('Chat history cleared');
-            }
+            // Clear chat silently without confirmation popup for stealth
+            chatHistory = [];
+            
+            const messagesContainer = document.getElementById('chatMessages');
+            const existingMessages = messagesContainer.querySelectorAll('.message');
+            existingMessages.forEach(msg => msg.remove());
+            
+            document.getElementById('emptyState').style.display = 'flex';
+            
+            console.log('Chat history cleared silently');
         }
         
         function exportChat() {
             if (chatHistory.length === 0) {
-                alert('No chat history to export');
+                // Silent fail for stealth - no alert popup
+                console.log('No chat history to export');
                 return;
             }
             
@@ -809,6 +935,49 @@
             input.style.height = Math.min(input.scrollHeight, 120) + 'px';
         }
         
+        // Listen for audio results from main process
+        ipcRenderer.on('add-audio-result', (event, data) => {
+            console.log('Received audio result from main process');
+            
+            const emptyState = document.getElementById('emptyState');
+            emptyState.style.display = 'none';
+            
+            // Add user message for system audio
+            const userMessage = {
+                id: ++messageId,
+                type: 'user',
+                content: '🎵 System audio analyzed',
+                timestamp: Date.now(),
+                isAudio: true
+            };
+            
+            chatHistory.push(userMessage);
+            addMessageToDOM(userMessage);
+            
+            // Add AI response
+            const aiMessage = {
+                id: ++messageId,
+                type: 'ai',
+                content: data.response,
+                timestamp: Date.now()
+            };
+            
+            chatHistory.push(aiMessage);
+            addMessageToDOM(aiMessage);
+            scrollToBottom();
+        });
+        
+        // Listen for recording status updates
+        ipcRenderer.on('recording-status-changed', (event, isRecording) => {
+            const audioStatus = document.getElementById('audioStatus');
+            if (isRecording) {
+                audioStatus.classList.add('show', 'recording');
+                audioStatus.textContent = '🔴 Recording system audio... (Ctrl+Shift+Space to stop)';
+            } else {
+                audioStatus.classList.remove('show', 'recording');
+            }
+        });
+        
         // Event listeners
         document.getElementById('messageInput').addEventListener('input', autoResize);
         
@@ -829,7 +998,7 @@
             }
         });
         
-        // Global screenshot hotkey listener
+        // Global hotkey listeners
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key === 'S') {
                 e.preventDefault();
@@ -853,7 +1022,7 @@
             });
         }, 100);
         
-        console.log('AI Chat interface loaded');
+        console.log('AI Chat interface loaded with VB Audio Cable support');
     </script>
 </body>
 </html>
