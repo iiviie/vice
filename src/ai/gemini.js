@@ -2,6 +2,31 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs').promises;
 const Logger = require('../utils/logger');
+const path = require('path');
+
+// Load detailed technical prompt from file
+let DETAILED_PROMPT = '';
+(async () => {
+  try {
+    DETAILED_PROMPT = await fs.readFile(path.join(__dirname, 'prompt.txt'), 'utf8');
+    Logger.info('Loaded Gemini prompt from prompt.txt');
+  } catch (e) {
+    Logger.warn('Could not load prompt.txt for Gemini:', e.message);
+    DETAILED_PROMPT = '';
+  }
+})();
+
+// Load audio analysis prompt from file
+let AUDIO_ANALYSIS_PROMPT = '';
+(async () => {
+  try {
+    AUDIO_ANALYSIS_PROMPT = await fs.readFile(path.join(__dirname, 'audio_analysis_prompt.txt'), 'utf8');
+    Logger.info('Loaded Gemini audio analysis prompt from audio_analysis_prompt.txt');
+  } catch (e) {
+    Logger.warn('Could not load audio_analysis_prompt.txt for Gemini:', e.message);
+    AUDIO_ANALYSIS_PROMPT = '';
+  }
+})();
 
 class GeminiClient {
   constructor(apiKey) {
@@ -27,7 +52,8 @@ class GeminiClient {
     try {
       Logger.info('Processing text with Gemini:', text.substring(0, 100) + '...');
       
-      const prompt = this.buildTextPrompt(text, context);
+      const promptContext = DETAILED_PROMPT + (context ? ('\n' + context) : '');
+      const prompt = this.buildTextPrompt(text, promptContext);
       const result = await this.model.generateContent(prompt);
       const response = result.response;
       const responseText = response.text();
@@ -73,7 +99,7 @@ class GeminiClient {
         }
       };
 
-      const textPrompt = this.buildImagePrompt(prompt);
+      const textPrompt = this.buildImagePrompt(DETAILED_PROMPT + (prompt ? ('\n' + prompt) : ''));
       
       const result = await this.model.generateContent([textPrompt, imagePart]);
       const response = result.response;
@@ -112,7 +138,7 @@ class GeminiClient {
         }
       };
 
-      const textPrompt = this.buildMultimodalPrompt(text);
+      const textPrompt = this.buildMultimodalPrompt(DETAILED_PROMPT + (text ? ('\n' + text) : ''));
       
       const result = await this.model.generateContent([textPrompt, imagePart]);
       const response = result.response;
@@ -124,6 +150,38 @@ class GeminiClient {
     } catch (error) {
       Logger.error('Gemini multimodal processing error:', error);
       throw new Error(`AI multimodal processing failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Process audio file with Gemini (if supported)
+   * @param {Buffer} audioBuffer - Buffer of audio file (e.g., wav)
+   * @param {string} mimeType - e.g., 'audio/wav'
+   * @param {string} prompt - Optional prompt for audio analysis
+   * @returns {Promise<string>} AI response
+   */
+  async processAudio(audioBuffer, mimeType = 'audio/wav', prompt = '') {
+    try {
+      Logger.info('Processing audio with Gemini');
+      if (!this.model.generateContent) {
+        throw new Error('Gemini API does not support audio input in this version.');
+      }
+      const audioPart = {
+        inlineData: {
+          data: audioBuffer.toString('base64'),
+          mimeType: mimeType
+        }
+      };
+      const textPrompt = (AUDIO_ANALYSIS_PROMPT || 'Please analyze the following audio and provide a helpful, technical, and layman-friendly response.') + (prompt ? ('\n' + prompt) : '');
+      // Try sending audio as a part (if supported by the API)
+      const result = await this.model.generateContent([textPrompt, audioPart]);
+      const response = result.response;
+      const responseText = response.text();
+      Logger.info('Gemini audio response received');
+      return responseText;
+    } catch (error) {
+      Logger.error('Gemini audio processing error:', error);
+      throw new Error(`AI audio processing failed: ${error.message}`);
     }
   }
 

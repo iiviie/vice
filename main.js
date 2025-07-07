@@ -172,19 +172,41 @@ function registerAudioToggleShortcut() {
         const audioFile = await audioRecorder.stopRecording();
         isRecording = false;
         console.log('Audio file saved:', audioFile);
-        // --- Transcribe with Whisper ---
+        // --- Send audio directly to Gemini ---
         try {
-          const transcription = await audioRecorder.transcribeAudio(audioFile);
-          console.log('Transcription:', transcription);
-          // Optionally: send to Gemini
-          if (geminiClient) {
-            const aiResponse = await geminiClient.processText(transcription);
-            console.log('Gemini AI response:', aiResponse);
-            // Optionally: show in overlay UI
-          }
-        } catch (transcribeErr) {
-          console.error('Transcription failed:', transcribeErr);
+          const fs = require('fs');
+          const audioBuffer = fs.readFileSync(audioFile);
+          // Use a detailed, technical, layman-friendly prompt for audio analysis
+          const audioPrompt = `You are an expert technical assistant. You will receive audio files (such as system recordings, meeting audio, or technical discussions) that may contain technical jargon, programming terms, or IT-related questions. Your job is to:
+
+1. Listen to the audio and interpret the content as accurately as possible, even if there are unclear words, background noise, or mispronunciations.
+2. If you detect technical terms that are mispronounced or unclear, make your best guess as to what the user meant (e.g., "jandu" might mean "Django").
+3. Always assume the audio is asking about a technical topic (software, hardware, programming, IT, etc.).
+4. Provide your answer in clear, simple, informal, and layman-friendly language.
+5. Be concise and to the point, but thorough enough to be helpful.
+6. If you are unsure, explain your reasoning and give your best guess.
+
+Examples:
+- If the audio asks about "jandu", answer about Django (the Python web framework).
+- If the audio asks "how to use dockers?", answer about Docker (the containerization tool).
+- If the audio asks "what is githap?", answer about GitHub.
+
+**Remember:**
+- The audio is always technical in nature.
+- Your job is to help the user as best as possible, even if the audio is unclear or contains errors.
+- Use informal, friendly, and simple language.
+- Be direct and helpful.`;
+          const aiResponse = await geminiClient.processAudio(
+            audioBuffer,
+            'audio/wav',
+            audioPrompt
+          );
+          console.log('Gemini AI audio response:', aiResponse);
+        } catch (audioErr) {
+          console.error('Gemini audio analysis failed:', audioErr);
         }
+        // Optionally: clean up audio file
+        try { await audioRecorder.cleanupAudioFile(audioFile); } catch {}
       } catch (err) {
         console.error('Toggle-record: Failed to stop recording', err);
       }
