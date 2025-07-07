@@ -1,4 +1,4 @@
-// src/ai/gemini.js - Gemini AI Client
+// src/ai/gemini.js - Gemini AI Client with Audio Support
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs').promises;
 const Logger = require('../utils/logger');
@@ -63,15 +63,40 @@ class GeminiClient {
       
     } catch (error) {
       Logger.error('Gemini text processing error:', error);
+      return this.handleError(error);
+    }
+  }
+
+  /**
+   * Process audio input with AI (UPDATED FOR VB AUDIO CABLE)
+   * @param {Buffer} audioBuffer - Audio data buffer from VB Cable recording
+   * @param {string} mimeType - Audio MIME type (e.g., 'audio/wav')
+   * @param {string} prompt - Optional prompt for audio analysis
+   * @returns {Promise<string>} AI response
+   */
+  async processAudio(audioBuffer, mimeType = 'audio/wav', prompt = '') {
+    try {
+      Logger.info('Processing audio with Gemini - VB Cable system audio');
       
-      // Handle specific error types
-      if (error.message.includes('429') || error.message.includes('quota')) {
-        return "⚠️ API Quota Exceeded\n\nYou've reached your Gemini API limit. Try:\n1. Wait a few minutes and try again\n2. Check your billing at https://makersuite.google.com\n3. Use a different API key\n\nError: Rate limit exceeded";
-      } else if (error.message.includes('401') || error.message.includes('API key')) {
-        return "🔑 API Key Error\n\nYour Gemini API key seems invalid. Please:\n1. Check your .env file\n2. Get a new key from https://makersuite.google.com/app/apikey\n3. Make sure the key is correctly set";
-      } else {
-        return `❌ AI Error\n\nSomething went wrong: ${error.message}\n\nPlease try again or check your internet connection.`;
-      }
+      const audioPart = {
+        inlineData: {
+          data: audioBuffer.toString('base64'),
+          mimeType: mimeType
+        }
+      };
+
+      const textPrompt = this.buildAudioPrompt(prompt);
+      
+      const result = await this.model.generateContent([textPrompt, audioPart]);
+      const response = result.response;
+      const responseText = response.text();
+      
+      Logger.info('Gemini audio response received');
+      return responseText;
+      
+    } catch (error) {
+      Logger.error('Gemini audio processing error:', error);
+      return this.handleError(error);
     }
   }
 
@@ -110,25 +135,30 @@ class GeminiClient {
       
     } catch (error) {
       Logger.error('Gemini image processing error:', error);
-      throw new Error(`AI image processing failed: ${error.message}`);
+      return this.handleError(error);
     }
   }
 
   /**
-   * Process multimodal input (text + image)
+   * Process multimodal input (text + image + audio)
    * @param {string} text - Text input
-   * @param {string|Buffer} imagePath - Image file path or buffer
+   * @param {Buffer} imageBuffer - Image buffer (optional)
+   * @param {Buffer} audioBuffer - Audio buffer (optional)
    * @returns {Promise<string>} AI response
    */
-  async processMultimodal(text, imagePath) {
+  async processMultimodal(text, imageBuffer = null, audioBuffer = null) {
     try {
       Logger.info('Processing multimodal input with Gemini');
       
-      let imageData;
-      if (Buffer.isBuffer(imagePath)) {
-        imageData = imagePath;
-      } else {
-        imageData = await fs.readFile(imagePath);
+      const parts = [this.buildMultimodalPrompt(text)];
+      
+      if (imageBuffer) {
+        parts.push({
+          inlineData: {
+            data: imageBuffer.toString('base64'),
+            mimeType: 'image/jpeg'
+          }
+        });
       }
 
       const imagePart = {
@@ -140,7 +170,7 @@ class GeminiClient {
 
       const textPrompt = this.buildMultimodalPrompt(DETAILED_PROMPT + (text ? ('\n' + text) : ''));
       
-      const result = await this.model.generateContent([textPrompt, imagePart]);
+      const result = await this.model.generateContent(parts);
       const response = result.response;
       const responseText = response.text();
       
@@ -205,6 +235,28 @@ Please provide a clear and helpful response:`;
   }
 
   /**
+   * Build audio analysis prompt (UPDATED FOR SYSTEM AUDIO)
+   * @param {string} customPrompt - Custom prompt for audio analysis
+   * @returns {string} Formatted prompt
+   */
+  buildAudioPrompt(customPrompt = '') {
+    if (customPrompt) {
+      return `Listen to this system audio and ${customPrompt}. Provide a detailed but concise response.`;
+    }
+    
+    return `Please listen to this system audio recording and provide a helpful response. This audio was captured from the computer's system audio output. Analyze what you hear and respond appropriately:
+
+1. If it's music - identify the genre, mood, or any recognizable elements
+2. If it's speech/dialogue - summarize the key points or content
+3. If it's a video/movie - describe what's happening in the audio
+4. If it's a meeting/call - summarize the discussion points
+5. If it's game audio - describe the game sounds or music
+6. If it's ambient/background noise - describe the environment
+
+Provide a clear and organized response based on the audio content.`;
+  }
+
+  /**
    * Build image analysis prompt
    * @param {string} customPrompt - Custom prompt for image analysis
    * @returns {string} Formatted prompt
@@ -231,7 +283,24 @@ Provide a clear and organized response.`;
   buildMultimodalPrompt(text) {
     return `User request: ${text}
 
-Please analyze the provided image in the context of this request and provide a helpful response.`;
+Please analyze any provided media (images, audio) in the context of this request and provide a helpful response.`;
+  }
+
+  /**
+   * Handle API errors with user-friendly messages
+   * @param {Error} error - The error object
+   * @returns {string} User-friendly error message
+   */
+  handleError(error) {
+    if (error.message.includes('429') || error.message.includes('quota')) {
+      return "⚠️ API Quota Exceeded\n\nYou've reached your Gemini API limit. Try:\n1. Wait a few minutes and try again\n2. Check your billing at https://makersuite.google.com\n3. Use a different API key";
+    } else if (error.message.includes('401') || error.message.includes('API key')) {
+      return "🔑 API Key Error\n\nYour Gemini API key seems invalid. Please:\n1. Check your .env file\n2. Get a new key from https://makersuite.google.com/app/apikey\n3. Make sure the key is correctly set";
+    } else if (error.message.includes('audio') || error.message.includes('media')) {
+      return "🎵 Audio Processing Error\n\nFailed to process audio. This might be due to:\n1. Unsupported audio format\n2. Audio file too large\n3. Network connectivity issues\n\nTry recording again with a shorter message.";
+    } else {
+      return `❌ AI Error\n\nSomething went wrong: ${error.message}\n\nPlease try again or check your internet connection.`;
+    }
   }
 
   /**
