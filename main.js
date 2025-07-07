@@ -149,7 +149,7 @@ function registerAIHotkeys() {
   }
 }
 
-// Register global shortcut for audio toggle (Ctrl+Shift+Space)
+// Register global shortcut for audio toggle (Ctrl+Shift+Space) - FIXED VERSION
 function registerAudioToggleShortcut() {
   const shortcut = 'CommandOrControl+Shift+Space';
   const success = globalShortcut.register(shortcut, async () => {
@@ -178,6 +178,12 @@ function registerAudioToggleShortcut() {
         const audioFile = await audioRecorder.stopRecording();
         isRecording = false;
         console.log('Audio file saved:', audioFile);
+        
+        // FIXED: Notify chat interface that recording stopped
+        if (aiInputWindow && aiInputWindow.webContents) {
+          aiInputWindow.webContents.send('recording-status-changed', false);
+        }
+        
         // --- Send audio directly to Gemini ---
         try {
           const fs = require('fs');
@@ -202,17 +208,50 @@ Examples:
 - Your job is to help the user as best as possible, even if the audio is unclear or contains errors.
 - Use informal, friendly, and simple language.
 - Be direct and helpful.`;
+          
           const aiResponse = await geminiClient.processAudio(
             audioBuffer,
             'audio/wav',
             audioPrompt
           );
           console.log('Gemini AI audio response:', aiResponse);
+          
+          // FIXED: Send result to chat interface instead of just console
+          if (aiInputWindow && aiInputWindow.webContents) {
+            aiInputWindow.webContents.send('add-audio-result', {
+              response: aiResponse,
+              audioFile: audioFile
+            });
+          } else {
+            // If chat window isn't open, show it and then send the result
+            await showAITextInput();
+            setTimeout(() => {
+              if (aiInputWindow && aiInputWindow.webContents) {
+                aiInputWindow.webContents.send('add-audio-result', {
+                  response: aiResponse,
+                  audioFile: audioFile
+                });
+              }
+            }, 500); // Wait for window to be ready
+          }
+          
         } catch (audioErr) {
           console.error('Gemini audio analysis failed:', audioErr);
+          
+          // Send error to chat interface
+          if (aiInputWindow && aiInputWindow.webContents) {
+            aiInputWindow.webContents.send('add-audio-result', {
+              response: `❌ Audio processing failed: ${audioErr.message}`,
+              audioFile: null
+            });
+          }
         }
+        
         // Optionally: clean up audio file
-        try { await audioRecorder.cleanupAudioFile(audioFile); } catch {}
+        try { 
+          await audioRecorder.cleanupAudioFile(audioFile); 
+        } catch {}
+        
       } catch (err) {
         console.error('Global Toggle-record: Failed to stop recording', err);
         isRecording = false;

@@ -307,6 +307,7 @@
             transition: all 0.2s ease;
             flex-shrink: 0;
             font-size: 16px;
+            position: relative;
         }
         
         .audio-btn:hover:not(:disabled) {
@@ -319,7 +320,7 @@
             background: #ff4444;
             color: white;
             border-color: #ff6666;
-            animation: recordingPulse 1s infinite;
+            animation: recordingPulse 1.5s infinite;
         }
         
         .audio-btn:disabled {
@@ -332,14 +333,17 @@
             0% { 
                 opacity: 1; 
                 transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7);
             }
             50% { 
-                opacity: 0.8; 
+                opacity: 0.9; 
                 transform: scale(1.05);
+                box-shadow: 0 0 0 6px rgba(255, 68, 68, 0.2);
             }
             100% { 
                 opacity: 1; 
                 transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 68, 68, 0);
             }
         }
         
@@ -461,30 +465,6 @@
             backdrop-filter: blur(8px);
             pointer-events: none;
         }
-
-        .audio-status {
-            position: fixed;
-            top: 50px;
-            right: 20px;
-            background: #2a2a2a;
-            border: 1px solid #4a4a4a;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 12px;
-            color: #888;
-            z-index: 100;
-            display: none;
-        }
-
-        .audio-status.show {
-            display: block;
-        }
-
-        .audio-status.recording {
-            border-color: #ff4444;
-            color: #ff6666;
-            background: rgba(255, 68, 68, 0.1);
-        }
     </style>
 </head>
 <body>
@@ -495,10 +475,6 @@
             <button class="action-btn" onclick="exportChat()" title="Export chat">📤</button>
             <button class="close-btn" onclick="window.close()">×</button>
         </div>
-    </div>
-    
-    <div class="audio-status" id="audioStatus">
-        🎵 System audio recording active (Ctrl+Shift+Space to stop)
     </div>
     
     <div class="main-container">
@@ -635,6 +611,7 @@
             return div.innerHTML;
         }
         
+        // Updated recording function with proper UI state management
         async function toggleSystemAudioRecording() {
             const audioBtn = document.getElementById('audioBtn');
             
@@ -643,12 +620,15 @@
                     // Stop recording
                     console.log('Stopping system audio recording via button...');
                     audioBtn.disabled = true;
-                    audioBtn.textContent = '⏹️';
                     
                     const result = await ipcRenderer.invoke('stop-system-audio-recording');
                     
                     if (result.success) {
                         console.log('System audio recording stopped successfully');
+                        isSystemRecording = false;
+                        audioBtn.classList.remove('recording');
+                        audioBtn.textContent = '🎵';
+                        audioBtn.title = 'Record system audio (Ctrl+Shift+Space)';
                         // The main process will handle sending the audio to Gemini
                         // and the result will come via IPC
                     } else {
@@ -663,6 +643,7 @@
                         
                         chatHistory.push(errorMessage);
                         addMessageToDOM(errorMessage);
+                        resetAudioButton();
                     }
                     
                 } else {
@@ -675,11 +656,8 @@
                         isSystemRecording = true;
                         audioBtn.classList.add('recording');
                         audioBtn.textContent = '🔴';
+                        audioBtn.title = 'Stop recording (Ctrl+Shift+Space)';
                         console.log('System audio recording started successfully');
-                        
-                        // Show recording status
-                        const audioStatus = document.getElementById('audioStatus');
-                        audioStatus.classList.add('show', 'recording');
                         
                     } else {
                         console.error('Failed to start recording:', result.error);
@@ -693,6 +671,7 @@
                         
                         chatHistory.push(errorMessage);
                         addMessageToDOM(errorMessage);
+                        resetAudioButton();
                     }
                 }
                 
@@ -711,18 +690,40 @@
                 
                 // Reset button state
                 resetAudioButton();
+            } finally {
+                audioBtn.disabled = false;
             }
         }
         
         function resetAudioButton() {
             const audioBtn = document.getElementById('audioBtn');
-            const audioStatus = document.getElementById('audioStatus');
             
             isSystemRecording = false;
             audioBtn.classList.remove('recording');
             audioBtn.textContent = '🎵';
+            audioBtn.title = 'Record system audio (Ctrl+Shift+Space)';
             audioBtn.disabled = false;
-            audioStatus.classList.remove('show', 'recording');
+        }
+        
+        // Global hotkey handler for Ctrl+Shift+Space
+        function handleGlobalAudioToggle() {
+            // This function will be called by the main process when Ctrl+Shift+Space is pressed
+            // We need to sync the UI state with the main process recording state
+            const audioBtn = document.getElementById('audioBtn');
+            
+            if (!isSystemRecording) {
+                // Starting recording
+                isSystemRecording = true;
+                audioBtn.classList.add('recording');
+                audioBtn.textContent = '🔴';
+                audioBtn.title = 'Stop recording (Ctrl+Shift+Space)';
+            } else {
+                // Stopping recording
+                isSystemRecording = false;
+                audioBtn.classList.remove('recording');
+                audioBtn.textContent = '🎵';
+                audioBtn.title = 'Record system audio (Ctrl+Shift+Space)';
+            }
         }
         
         async function takeScreenshot() {
@@ -965,16 +966,27 @@
             chatHistory.push(aiMessage);
             addMessageToDOM(aiMessage);
             scrollToBottom();
+            
+            // Reset the audio button after receiving result
+            resetAudioButton();
         });
         
-        // Listen for recording status updates
+        // Listen for recording status updates from global hotkey
         ipcRenderer.on('recording-status-changed', (event, isRecording) => {
-            const audioStatus = document.getElementById('audioStatus');
+            console.log('Recording status changed via global hotkey:', isRecording);
+            
+            const audioBtn = document.getElementById('audioBtn');
+            
             if (isRecording) {
-                audioStatus.classList.add('show', 'recording');
-                audioStatus.textContent = '🔴 Recording system audio... (Ctrl+Shift+Space to stop)';
+                isSystemRecording = true;
+                audioBtn.classList.add('recording');
+                audioBtn.textContent = '🔴';
+                audioBtn.title = 'Stop recording (Ctrl+Shift+Space)';
             } else {
-                audioStatus.classList.remove('show', 'recording');
+                isSystemRecording = false;
+                audioBtn.classList.remove('recording');
+                audioBtn.textContent = '🎵';
+                audioBtn.title = 'Record system audio (Ctrl+Shift+Space)';
             }
         });
         
@@ -1022,7 +1034,7 @@
             });
         }, 100);
         
-        console.log('AI Chat interface loaded with VB Audio Cable support');
+        console.log('AI Chat interface loaded - recording button will sync with global hotkey');
     </script>
 </body>
 </html>
