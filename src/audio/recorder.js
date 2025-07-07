@@ -1,8 +1,7 @@
 // src/audio/recorder.js - System Audio Recording and Transcription
-const recorder = require('node-record-lpcm16');
+const { spawn } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
-const { spawn } = require('child_process');
 const Logger = require('../utils/logger');
 
 class SystemAudioRecorder {
@@ -21,7 +20,8 @@ class SystemAudioRecorder {
       threshold: 0.5,
       verbose: false,
       recordProgram: 'sox', // Use SoX for cross-platform recording
-      silence: '1.0'
+      silence: '1.0',
+      device: 'CABLE Output (VB-Audio Virtual Cable)'
     };
     
     Logger.info('Audio recorder initialized');
@@ -48,15 +48,23 @@ class SystemAudioRecorder {
       const timestamp = Date.now();
       this.currentRecordingFile = path.join(this.outputPath, `recording_${timestamp}.wav`);
       
-      // Start recording
-      this.recording = recorder.record(this.recorderOptions);
-      
-      // Pipe to file
-      const fileStream = require('fs').createWriteStream(this.currentRecordingFile);
-      this.recording.stream().pipe(fileStream);
+      // Use the exact working command
+      this.recording = spawn('sox', [
+        '-t', 'waveaudio',
+        'CABLE Output (VB-Audio Virtual Cable)',
+        this.currentRecordingFile
+      ]);
       
       this.isRecording = true;
       Logger.info('Audio recording started:', this.currentRecordingFile);
+      
+      this.recording.stderr.on('data', (data) => {
+        Logger.error('SoX STDERR:', data.toString());
+      });
+
+      this.recording.on('close', (code) => {
+        Logger.info('SoX process exited with code', code);
+      });
       
       return this.currentRecordingFile;
       
@@ -76,7 +84,7 @@ class SystemAudioRecorder {
     }
 
     try {
-      this.recording.stop();
+      this.recording.kill('SIGINT'); // Send Ctrl+C to stop sox
       this.isRecording = false;
       
       // Wait a moment for file to be written
@@ -129,11 +137,11 @@ class SystemAudioRecorder {
    */
   async runWhisperTranscription(audioFilePath) {
     return new Promise((resolve, reject) => {
-      // Use whisper command line tool
+      // Use whisper command line tool with base model, output to stdout
       const whisper = spawn('whisper', [
         audioFilePath,
         '--model', 'base',
-        '--output_format', 'txt',
+        '--output_format', 'json', // We'll read and delete the file immediately
         '--output_dir', this.outputPath,
         '--verbose', 'False'
       ]);
@@ -152,14 +160,22 @@ class SystemAudioRecorder {
       whisper.on('close', async (code) => {
         if (code === 0) {
           try {
-            // Read the generated transcript file
+            // Read the generated transcript file (json)
             const baseName = path.basename(audioFilePath, '.wav');
-            const transcriptFile = path.join(this.outputPath, `${baseName}.txt`);
-            const transcription = await fs.readFile(transcriptFile, 'utf8');
-            
+            const transcriptFile = path.join(this.outputPath, `${baseName}.json`);
+            let transcription = '';
+            try {
+              const jsonContent = await fs.readFile(transcriptFile, 'utf8');
+              const json = JSON.parse(jsonContent);
+              transcription = json.text || '';
+            } catch (e) {
+              transcription = '';
+            }
             // Clean up transcript file
             await fs.unlink(transcriptFile).catch(() => {});
-            
+            // Clean up .txt file if it exists
+            const txtFile = path.join(this.outputPath, `${baseName}.txt`);
+            await fs.unlink(txtFile).catch(() => {});
             resolve(transcription.trim());
           } catch (readError) {
             reject(new Error(`Failed to read transcription: ${readError.message}`));

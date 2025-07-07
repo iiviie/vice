@@ -17,6 +17,7 @@ let allWindowsHidden = false; // Track global hide state
 let geminiClient = null;
 let audioRecorder = null;
 let screenCapturer = null;
+let lastAudioToggle = 0;
 
 // Initialize AI client
 async function initializeAI() {
@@ -99,6 +100,7 @@ function createOverlay() {
     
     // Register all hotkeys AFTER window is ready
     registerAIHotkeys();
+    registerAudioToggleShortcut();
   });
 
   // Handle window closed
@@ -144,6 +146,54 @@ function registerAIHotkeys() {
     console.log('✅ All AI hotkeys registered successfully');
   } else {
     console.error('❌ Some hotkeys failed to register - may be conflicts with other apps');
+  }
+}
+
+// Register global shortcut for audio toggle (Ctrl+Shift+Space)
+function registerAudioToggleShortcut() {
+  const { globalShortcut } = require('electron');
+  const shortcut = 'CommandOrControl+Shift+Space';
+  const success = globalShortcut.register(shortcut, async () => {
+    const now = Date.now();
+    if (now - lastAudioToggle < 500) return; // 500ms debounce
+    lastAudioToggle = now;
+
+    if (audioRecorder && !isRecording) {
+      console.log('Toggle-record: START');
+      try {
+        await audioRecorder.startRecording();
+        isRecording = true;
+      } catch (err) {
+        console.error('Toggle-record: Failed to start recording', err);
+      }
+    } else if (audioRecorder && isRecording) {
+      console.log('Toggle-record: STOP');
+      try {
+        const audioFile = await audioRecorder.stopRecording();
+        isRecording = false;
+        console.log('Audio file saved:', audioFile);
+        // --- Transcribe with Whisper ---
+        try {
+          const transcription = await audioRecorder.transcribeAudio(audioFile);
+          console.log('Transcription:', transcription);
+          // Optionally: send to Gemini
+          if (geminiClient) {
+            const aiResponse = await geminiClient.processText(transcription);
+            console.log('Gemini AI response:', aiResponse);
+            // Optionally: show in overlay UI
+          }
+        } catch (transcribeErr) {
+          console.error('Transcription failed:', transcribeErr);
+        }
+      } catch (err) {
+        console.error('Toggle-record: Failed to stop recording', err);
+      }
+    }
+  });
+  if (success) {
+    console.log('Audio toggle shortcut registered:', shortcut);
+  } else {
+    console.error('Failed to register audio toggle shortcut:', shortcut);
   }
 }
 
